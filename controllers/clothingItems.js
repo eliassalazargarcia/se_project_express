@@ -3,6 +3,7 @@ const ClothingItem = require("../models/clothingItem");
 // Import error status codes
 const {
   BAD_REQUEST,
+  FORBIDDEN,
   NOT_FOUND,
   INTERNAL_SERVER_ERROR,
 } = require("../utils/errors");
@@ -42,12 +43,28 @@ const createItem = (req, res) => {
 };
 
 // Controller to delete a clothing item by ID
+// 🔒 SECURITY: Only the owner of an item can delete it
 const deleteItem = (req, res) => {
   const { itemId } = req.params;
 
-  ClothingItem.findByIdAndDelete(itemId)
+  // Step 1: First, find the item to check if it exists and who owns it
+  ClothingItem.findById(itemId)
     .orFail() // Throw error if item not found
-    .then((item) => res.status(200).send(item))
+    .then((item) => {
+      // Step 2: Check if the current user is the owner of this item
+      // Convert both IDs to strings for comparison (they're ObjectId objects)
+      if (item.owner.toString() !== req.user._id) {
+        // ❌ User is NOT the owner - they cannot delete this item!
+        return res.status(FORBIDDEN).send({
+          message: "You don't have permission to delete this item",
+        });
+      }
+
+      // ✅ User IS the owner - proceed with deletion
+      return ClothingItem.findByIdAndDelete(itemId)
+        .orFail()
+        .then((deletedItem) => res.status(200).send(deletedItem));
+    })
     .catch((err) => {
       console.error(err);
       // Check if error is because document was not found
