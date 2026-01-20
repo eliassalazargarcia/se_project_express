@@ -1,16 +1,13 @@
 // Import Express router
 const router = require("express").Router();
 // Import user controller functions
-const { getUsers, createUser, getUser } = require("../controllers/users");
+const { getCurrentUser, updateUser } = require("../controllers/users");
 
-// GET /users - Get all users
-router.get("/", getUsers);
+// GET /users/me - Get the current logged-in user's profile
+router.get("/me", getCurrentUser);
 
-// GET /users/:userId - Get a specific user by ID
-router.get("/:userId", getUser);
-
-// POST /users - Create a new user
-router.post("/", createUser);
+// PATCH /users/me - Update the current user's profile (name and avatar only)
+router.patch("/me", updateUser);
 
 // Export the router
 module.exports = router;
