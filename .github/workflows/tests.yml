@@ -40,6 +40,9 @@ jobs:
         with:
           node-version: 22.x
 
+      - name: Verify npm version
+        run: npm --version
+
       - name: Get testing lib
         id: testing-lib
         run: set -eu && git clone --depth 1 https://github.com/tripleten-com/se-actions-tests-p.git
