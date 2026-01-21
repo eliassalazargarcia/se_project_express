@@ -10,7 +10,7 @@ The API provides user authentication, clothing item management, and social featu
 
 ## 🎥 Project Demo Video
 
-**[🎬 Click here to watch my project presentation video](YOUR_VIDEO_LINK_HERE)**
+**[🎬 Click here to watch my project presentation video](https://drive.google.com/file/d/1RdvC3LqKREUBBHQLA-sF8x5Nf3u09IBn/view?usp=sharing)**
 
 > _In this video, I demonstrate the key features of the WTWR backend API, explain the authentication flow, and show how the API handles different user requests._
 
