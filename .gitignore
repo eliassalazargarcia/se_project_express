@@ -16,3 +16,7 @@ node_modules
 
 # Personal notes and guides
 THUNDER_CLIENT_GUIDE.md
+
+# Environment variables
+.env
+.env.local

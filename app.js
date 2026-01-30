@@ -4,12 +4,16 @@
 // This is the main entry point for the backend server
 // It handles clothing items and user authentication
 
+require("dotenv").config();
+
 // Import required modules
 const express = require("express");
 const mongoose = require("mongoose");
-const cors = require("cors"); // Allows frontend to make requests to this backend
+const cors = require("cors");
+const { errors } = require("celebrate");
 const mainRouter = require("./routes/index");
 const errorHandler = require("./middlewares/errorHandler");
+const { requestLogger, errorLogger } = require("./middlewares/logger");
 
 // Create Express application
 const app = express();
@@ -24,10 +28,10 @@ const { PORT = 3001 } = process.env;
 mongoose
   .connect("mongodb://127.0.0.1:27017/wtwr_db")
   .then(() => {
-    console.log("✅ Connected to MongoDB database");
+    console.log("Connected to MongoDB database");
   })
   .catch((err) => {
-    console.error("❌ Database connection error:", err);
+    console.error("Database connection error:", err);
   });
 
 // ============================================
@@ -40,6 +44,20 @@ app.use(cors());
 // 2. Parse incoming JSON request bodies
 app.use(express.json());
 
+// 3. Request logger - logs all requests to request.log
+app.use(requestLogger);
+
+// ============================================
+// CRASH TEST ROUTE (for PM2 testing)
+// ============================================
+// This route is used to test server crash recovery
+// Remove after passing the code review
+app.get("/crash-test", () => {
+  setTimeout(() => {
+    throw new Error("Server will crash now");
+  }, 0);
+});
+
 // ============================================
 // ROUTES
 // ============================================
@@ -49,6 +67,13 @@ app.use("/", mainRouter);
 // ============================================
 // ERROR HANDLING
 // ============================================
+
+// Error logger - logs all errors to error.log
+app.use(errorLogger);
+
+// Celebrate error handler - handles validation errors from celebrate/joi
+app.use(errors());
+
 // Central error handler - catches all errors from routes/controllers
 app.use(errorHandler);
 
@@ -56,6 +81,6 @@ app.use(errorHandler);
 // START SERVER
 // ============================================
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
-  console.log(`📍 Access the API at: http://localhost:${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
+  console.log(`Access the API at: http://localhost:${PORT}`);
 });
