@@ -8,21 +8,23 @@ const {
   likeItem,
   dislikeItem,
 } = require("../controllers/clothingItems");
+// Import validation middleware
+const { validateItemBody, validateItemId } = require("../middlewares/validation");
 
 // GET /items - Get all clothing items
 router.get("/", getItems);
 
 // POST /items - Create a new clothing item
-router.post("/", createItem);
+router.post("/", validateItemBody, createItem);
 
 // DELETE /items/:itemId - Delete a clothing item by ID
-router.delete("/:itemId", deleteItem);
+router.delete("/:itemId", validateItemId, deleteItem);
 
 // PUT /items/:itemId/likes - Like an item
-router.put("/:itemId/likes", likeItem);
+router.put("/:itemId/likes", validateItemId, likeItem);
 
 // DELETE /items/:itemId/likes - Unlike an item
-router.delete("/:itemId/likes", dislikeItem);
+router.delete("/:itemId/likes", validateItemId, dislikeItem);
 
 // Export the router
 module.exports = router;

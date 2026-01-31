@@ -6,17 +6,16 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 // Import JWT secret from config
 const { JWT_SECRET } = require("../utils/config");
-// Import error status codes
+// Import custom error classes
 const {
-  BAD_REQUEST,
-  UNAUTHORIZED,
-  NOT_FOUND,
-  CONFLICT,
-  INTERNAL_SERVER_ERROR,
-} = require("../utils/errors");
+  BadRequestError,
+  UnauthorizedError,
+  NotFoundError,
+  ConflictError,
+} = require("../errors");
 
 // Controller to create a new user (signup)
-const createUser = (req, res) => {
+const createUser = (req, res, next) => {
   const { name, avatar, email, password } = req.body;
 
   // Hash the password before saving to database
@@ -30,26 +29,21 @@ const createUser = (req, res) => {
       res.status(201).send(userResponse);
     })
     .catch((err) => {
-      console.error(err);
       // Check if error is due to duplicate email (MongoDB error code 11000)
       if (err.code === 11000) {
-        return res
-          .status(CONFLICT)
-          .send({ message: "A user with this email already exists" });
+        return next(new ConflictError("A user with this email already exists"));
       }
       // Check if error is due to validation failure
       if (err.name === "ValidationError") {
-        return res.status(BAD_REQUEST).send({ message: err.message });
+        return next(new BadRequestError(err.message));
       }
-      // Default to 500 error
-      return res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error has occurred on the server" });
+      // Pass other errors to centralized error handler
+      return next(err);
     });
 };
 
 // Controller for user login
-const login = (req, res) => {
+const login = (req, res, next) => {
   const { email, password } = req.body;
 
   // Use the custom method to find user by credentials
@@ -62,66 +56,53 @@ const login = (req, res) => {
       // Send token to client
       res.send({ token });
     })
-    .catch((err) => {
-      console.error(err);
+    .catch(() => {
       // Return 401 for incorrect email or password
-      return res
-        .status(UNAUTHORIZED)
-        .send({ message: "Incorrect email or password" });
+      next(new UnauthorizedError("Incorrect email or password"));
     });
 };
 
 // Controller to get the current logged-in user
-const getCurrentUser = (req, res) => {
+const getCurrentUser = (req, res, next) => {
   const userId = req.user._id;
 
   User.findById(userId)
     .orFail()
     .then((user) => res.status(200).send(user))
     .catch((err) => {
-      console.error(err);
       if (err.name === "DocumentNotFoundError") {
-        return res
-          .status(NOT_FOUND)
-          .send({ message: "User not found" });
+        return next(new NotFoundError("User not found"));
       }
       if (err.name === "CastError") {
-        return res.status(BAD_REQUEST).send({ message: "Invalid user ID" });
+        return next(new BadRequestError("Invalid user ID"));
       }
-      return res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error has occurred on the server" });
+      return next(err);
     });
 };
 
 // Controller to update the current user's profile (name and avatar only)
-const updateUser = (req, res) => {
+const updateUser = (req, res, next) => {
   const userId = req.user._id;
   const { name, avatar } = req.body;
 
   User.findByIdAndUpdate(
     userId,
     { name, avatar },
-    { new: true, runValidators: true } // Return updated doc and run validators
+    { new: true, runValidators: true }
   )
     .orFail()
     .then((user) => res.status(200).send(user))
     .catch((err) => {
-      console.error(err);
       if (err.name === "DocumentNotFoundError") {
-        return res
-          .status(NOT_FOUND)
-          .send({ message: "User not found" });
+        return next(new NotFoundError("User not found"));
       }
       if (err.name === "ValidationError") {
-        return res.status(BAD_REQUEST).send({ message: err.message });
+        return next(new BadRequestError(err.message));
       }
       if (err.name === "CastError") {
-        return res.status(BAD_REQUEST).send({ message: "Invalid user ID" });
+        return next(new BadRequestError("Invalid user ID"));
       }
-      return res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error has occurred on the server" });
+      return next(err);
     });
 };
 

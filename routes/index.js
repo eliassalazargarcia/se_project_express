@@ -1,9 +1,14 @@
 // Import Express router
 const router = require("express").Router();
-// Import error status code
-const { NOT_FOUND } = require("../utils/errors");
+// Import custom error class
+const { NotFoundError } = require("../errors");
 // Import auth middleware
 const auth = require("../middlewares/auth");
+// Import validation middleware
+const {
+  validateUserBody,
+  validateUserLogin,
+} = require("../middlewares/validation");
 // Import controllers for signin/signup
 const { createUser, login } = require("../controllers/users");
 // Import getItems controller for public access
@@ -18,10 +23,10 @@ const clothingItemRouter = require("./clothingItems");
 // ============================================
 
 // POST /signup - Create a new user account
-router.post("/signup", createUser);
+router.post("/signup", validateUserBody, createUser);
 
 // POST /signin - Login and get a JWT token
-router.post("/signin", login);
+router.post("/signin", validateUserLogin, login);
 
 // GET /items - Get all clothing items (public access)
 router.get("/items", getItems);
@@ -40,8 +45,8 @@ router.use("/users", userRouter);
 router.use("/items", clothingItemRouter);
 
 // Handle requests to non-existent resources (404 Not Found)
-router.use((_req, res) => {
-  res.status(NOT_FOUND).send({ message: "Requested resource not found" });
+router.use((_req, _res, next) => {
+  next(new NotFoundError("Requested resource not found"));
 });
 
 // Export the main router

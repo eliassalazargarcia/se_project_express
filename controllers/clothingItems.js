@@ -1,28 +1,21 @@
 // Import the ClothingItem model
 const ClothingItem = require("../models/clothingItem");
-// Import error status codes
+// Import custom error classes
 const {
-  BAD_REQUEST,
-  FORBIDDEN,
-  NOT_FOUND,
-  INTERNAL_SERVER_ERROR,
-} = require("../utils/errors");
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} = require("../errors");
 
 // Controller to get all clothing items
-const getItems = (req, res) => {
+const getItems = (req, res, next) => {
   ClothingItem.find({})
     .then((items) => res.status(200).send(items))
-    .catch((err) => {
-      console.error(err);
-      // Return 500 error for any server issues
-      return res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error has occurred on the server" });
-    });
+    .catch(next);
 };
 
 // Controller to create a new clothing item
-const createItem = (req, res) => {
+const createItem = (req, res, next) => {
   const { name, weather, imageUrl } = req.body;
   // Get the owner ID from the authenticated user (added by middleware)
   const owner = req.user._id;
@@ -30,113 +23,80 @@ const createItem = (req, res) => {
   ClothingItem.create({ name, weather, imageUrl, owner })
     .then((item) => res.status(201).send(item))
     .catch((err) => {
-      console.error(err);
       // Check if error is due to validation failure
       if (err.name === "ValidationError") {
-        return res.status(BAD_REQUEST).send({ message: err.message });
+        return next(new BadRequestError(err.message));
       }
-      // Default to 500 error
-      return res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error has occurred on the server" });
+      return next(err);
     });
 };
 
 // Controller to delete a clothing item by ID
-// 🔒 SECURITY: Only the owner of an item can delete it
-const deleteItem = (req, res) => {
+// Only the owner of an item can delete it
+const deleteItem = (req, res, next) => {
   const { itemId } = req.params;
 
-  // Step 1: First, find the item to check if it exists and who owns it
+  // First, find the item to check if it exists and who owns it
   ClothingItem.findById(itemId)
-    .orFail() // Throw error if item not found
+    .orFail()
     .then((item) => {
-      // Step 2: Check if the current user is the owner of this item
-      // Convert both IDs to strings for comparison (they're ObjectId objects)
+      // Check if the current user is the owner of this item
       if (item.owner.toString() !== req.user._id) {
-        // ❌ User is NOT the owner - they cannot delete this item!
-        return res.status(FORBIDDEN).send({
-          message: "You don't have permission to delete this item",
-        });
+        throw new ForbiddenError("You don't have permission to delete this item");
       }
 
-      // ✅ User IS the owner - proceed with deletion
-      return ClothingItem.findByIdAndDelete(itemId)
-        .orFail()
-        .then((deletedItem) => res.status(200).send(deletedItem));
+      // User is the owner - proceed with deletion
+      return ClothingItem.findByIdAndDelete(itemId).orFail();
     })
+    .then((deletedItem) => res.status(200).send(deletedItem))
     .catch((err) => {
-      console.error(err);
-      // Check if error is because document was not found
       if (err.name === "DocumentNotFoundError") {
-        return res
-          .status(NOT_FOUND)
-          .send({ message: "Item not found with the specified ID" });
+        return next(new NotFoundError("Item not found with the specified ID"));
       }
-      // Check if error is due to invalid ID format
       if (err.name === "CastError") {
-        return res.status(BAD_REQUEST).send({ message: "Invalid item ID" });
+        return next(new BadRequestError("Invalid item ID"));
       }
-      // Default to 500 error
-      return res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error has occurred on the server" });
+      return next(err);
     });
 };
 
 // Controller to like an item (add user ID to likes array)
-const likeItem = (req, res) => {
+const likeItem = (req, res, next) => {
   ClothingItem.findByIdAndUpdate(
     req.params.itemId,
-    { $addToSet: { likes: req.user._id } }, // Add _id to array if not already present
-    { new: true }, // Return the updated document
+    { $addToSet: { likes: req.user._id } },
+    { new: true }
   )
-    .orFail() // Throw error if item not found
+    .orFail()
     .then((item) => res.status(200).send(item))
     .catch((err) => {
-      console.error(err);
-      // Check if error is because document was not found
       if (err.name === "DocumentNotFoundError") {
-        return res
-          .status(NOT_FOUND)
-          .send({ message: "Item not found with the specified ID" });
+        return next(new NotFoundError("Item not found with the specified ID"));
       }
-      // Check if error is due to invalid ID format
       if (err.name === "CastError") {
-        return res.status(BAD_REQUEST).send({ message: "Invalid item ID" });
+        return next(new BadRequestError("Invalid item ID"));
       }
-      // Default to 500 error
-      return res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error has occurred on the server" });
+      return next(err);
     });
 };
 
 // Controller to unlike an item (remove user ID from likes array)
-const dislikeItem = (req, res) => {
+const dislikeItem = (req, res, next) => {
   ClothingItem.findByIdAndUpdate(
     req.params.itemId,
-    { $pull: { likes: req.user._id } }, // Remove _id from array
-    { new: true }, // Return the updated document
+    { $pull: { likes: req.user._id } },
+    { new: true }
   )
-    .orFail() // Throw error if item not found
+    .orFail()
     .then((item) => res.status(200).send(item))
     .catch((err) => {
-      console.error(err);
-      // Check if error is because document was not found
       if (err.name === "DocumentNotFoundError") {
-        return res
-          .status(NOT_FOUND)
-          .send({ message: "Item not found with the specified ID" });
+        return next(new NotFoundError("Item not found with the specified ID"));
       }
-      // Check if error is due to invalid ID format
       if (err.name === "CastError") {
-        return res.status(BAD_REQUEST).send({ message: "Invalid item ID" });
+        return next(new BadRequestError("Invalid item ID"));
       }
-      // Default to 500 error
-      return res
-        .status(INTERNAL_SERVER_ERROR)
-        .send({ message: "An error has occurred on the server" });
+      return next(err);
     });
 };
 
