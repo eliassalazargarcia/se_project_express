@@ -10,8 +10,8 @@ The API provides user authentication, clothing item management, and social featu
 
 ## Deployed Project
 
-- **Backend API:** https://api.finalsprint.jumpingcrab.com
-- **Frontend:** https://finalsprint.jumpingcrab.com
+- **Backend API:** http://api.finalsprint.jumpingcrab.com
+- **Frontend:** http://finalsprint.jumpingcrab.com
 - **Frontend Repository:** https://github.com/eliassalazargarcia/se_project_react
 
 ---
